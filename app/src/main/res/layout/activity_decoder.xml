@@ -11,10 +11,30 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <SurfaceView
+    <Button
+        android:id="@+id/btn_start_mediaCodec"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="15dp"
+        android:onClick="onclick"
+        app:layout_constraintLeft_toRightOf="@id/btn_start"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageView
         android:id="@+id/surface_view"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintDimensionRatio="16:9"
-        app:layout_constraintTop_toBottomOf="@id/btn_start" />
+        app:layout_constraintDimensionRatio="1"
+        app:layout_constraintTop_toBottomOf="@id/btn_start"
+        app:layout_constraintWidth_percent="0.3333" />
+
+    <ImageView
+        android:id="@+id/iv_media_codec"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginLeft="15dp"
+        app:layout_constraintDimensionRatio="1"
+        app:layout_constraintLeft_toRightOf="@id/surface_view"
+        app:layout_constraintTop_toBottomOf="@id/btn_start"
+        app:layout_constraintWidth_percent="0.3333" />
 </androidx.constraintlayout.widget.ConstraintLayout>

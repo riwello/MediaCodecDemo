@@ -17,6 +17,10 @@ class MainActivity : AppCompatActivity() {
     lateinit var tvMsg: TextView
     lateinit var etWidth: EditText
     lateinit var etHeight: EditText
+
+
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -51,11 +55,10 @@ class MainActivity : AppCompatActivity() {
                             append("supportedWidths ${videoCapabilities.supportedWidths}\n")
                             append("supportedHeights ${videoCapabilities.supportedHeights}\n")
                             append("supportedFrameRates ${videoCapabilities.supportedFrameRates}\n")
-                            
                         }
                         Log.d(
                             "main",
-                            "supportedFrameRates ${videoCapabilities.supportedFrameRates}  "
+                            tvMsg.text.toString()
                         )
 
 

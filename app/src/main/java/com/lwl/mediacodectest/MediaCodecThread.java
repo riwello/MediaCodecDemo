@@ -4,8 +4,6 @@ import android.util.Log;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.util.Arrays;
-import java.util.logging.Logger;
 
 public class MediaCodecThread extends Thread {
     String TAG = "MediaCodecThread";
@@ -22,6 +20,9 @@ public class MediaCodecThread extends Thread {
 //    private static int FRAME_MAX_LEN = 500 * 1024;
     //根据帧率获取的解码每帧需要休眠的时间,根据实际帧率进行操作
     private int PRE_FRAME_TIME = 1000 / 25;
+    int iFrameIndex = -1;
+    int spsFrameIndex = -1;
+    int sppFrameIndex = -1;
 
     /**
      * 初始化解码器
@@ -34,27 +35,48 @@ public class MediaCodecThread extends Thread {
         this.path = path;
     }
 
-    /**
-     * 寻找指定buffer中h264头的开始位置
-     *
-     * @param data   数据
-     * @param offset 偏移量
-     * @param max    需要检测的最大值
-     * @return h264头的开始位置 ,-1表示未发现
-     */
-    private int findHead(byte[] data, int offset, int max) {
-        int i;
-        for (i = offset; i <= max; i++) {
+//    /**
+//     * 寻找指定buffer中h264头的开始位置
+//     *
+//     * @param data   数据
+//     * @param offset 偏移量
+//     * @param max    需要检测的最大值
+//     * @return h264头的开始位置 ,-1表示未发现
+//     */
+//    private int findHead(byte[] data, int offset, int max) {
+//        int i;
+//        for (i = offset; i <= max; i++) {
+//            //发现帧头
+//            if (isHead(data, i))
+//                break;
+//        }
+//        //检测到最大值，未发现帧头
+//        if (i == max) {
+//            i = -1;
+//        }
+//        return i;
+//    }
+
+    private void findHead(byte[] data, int offset, int max) {
+
+        for (; offset <= max; offset++) {
             //发现帧头
-            if (isHead(data, i))
+            if (iFrameIndex == -1 && isHead(data, offset)) {
+                iFrameIndex = offset;
+            }
+            if (spsFrameIndex == -1 && isSpsHead(data, offset)) {
+                spsFrameIndex = offset;
+            }
+            if (sppFrameIndex == -1 && isSppHead(data, offset)) {
+                sppFrameIndex = offset;
+            }
+
+            if (iFrameIndex != -1 && spsFrameIndex != -1 && sppFrameIndex != -1) {
                 break;
+            }
         }
-        //检测到最大值，未发现帧头
-        if (i == max) {
-            i = -1;
-        }
-        return i;
     }
+
 
     /**
      * 判断是否是I帧/P帧头:
@@ -116,6 +138,57 @@ public class MediaCodecThread extends Thread {
         }
         return result;
     }
+    @Override
+    public void run() {
+        super.run();
+        File file = new File(path);
+        int fileSize = (int) file.length();
+        //判断文件是否存在
+        if (file.exists()) {
+            try {
+                FileInputStream fis = new FileInputStream(file);
+                //保存完整数据帧
+                byte[] frame = new byte[fileSize*2];
+                //当前帧长度
+                int frameLen = 0;
+                //每次从文件读取的数据
+                byte[] readData = new byte[10 * 1024];
+                //开始时间
+                long startTime = System.currentTimeMillis();
+                //循环读取数据
+                while (!isFinish) {
+                    if (fis.available() > 0) {
+                        int readLen = fis.read(readData);
+                        Log.d(TAG, "readLen" + readLen);
+                        //当前长度小于文件大小
+                        //将readData拷贝到frame
+                        System.arraycopy(readData, 0, frame, frameLen, readLen);
+                        //修改frameLen
+                        frameLen += readLen;
+                        //寻找第一个帧头
+                        if (frameLen >= fileSize) {
+                            //视频解码
+                            Log.d(TAG, "编码文件读完 totalRead "+frameLen);
+                            onFrame(frame, 0, frameLen);
+                            //文件读取结束
+                            isFinish = true;
+                            break;
+                        }
+
+                    } else {
+                        //文件读取结束
+                        isFinish = true;
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else {
+            Log.e(TAG, "File not found");
+        }
+    }
+
+//
 //    @Override
 //    public void run() {
 //        super.run();
@@ -126,7 +199,7 @@ public class MediaCodecThread extends Thread {
 //            try {
 //                FileInputStream fis = new FileInputStream(file);
 //                //保存完整数据帧
-//                byte[] frame = new byte[fileSize*2];
+//                byte[] frame = new byte[fileSize];
 //                //当前帧长度
 //                int frameLen = 0;
 //                //每次从文件读取的数据
@@ -144,14 +217,35 @@ public class MediaCodecThread extends Thread {
 //                        //修改frameLen
 //                        frameLen += readLen;
 //                        //寻找第一个帧头
+//                        findHead(frame, 0, frameLen);
+//
+//                        Log.d(TAG, "i帧位置 " + iFrameIndex + " spp " + spsFrameIndex + " spp " + sppFrameIndex + " totalRead  " + frameLen);
 //                        if (frameLen >= fileSize) {
-//                            //视频解码
-//                            Log.d(TAG, "编码文件读完 totalRead "+frameLen);
-//                            onFrame(frame, 0, frameLen);
-//                            //文件读取结束
+//                            byte[] sps = new byte[sppFrameIndex - spsFrameIndex];
+//                            byte[] spp = new byte[iFrameIndex - sppFrameIndex];
+//                            System.arraycopy(frame, spsFrameIndex, sps,0,sps.length);
+//                            System.arraycopy(frame, sppFrameIndex, spp,0,spp.length);
+//                            util.initDecoder(sps, spp);
+//                            util.onFrame(frame, iFrameIndex, fileSize - iFrameIndex);
 //                            isFinish = true;
-//                            break;
+//                                break;
 //                        }
+////                        while (headFirstIndex >= 0 && isHead(frame, headFirstIndex)) {
+////                            Log.d(TAG, "找到i帧头 " + frameLen + " file size" + fileSize);
+////
+////                            //读长度 等于文件长度 ,表示 文件已读完
+////                            if (frameLen >= fileSize) {
+////                                //视频解码
+////                                Log.d(TAG, "编码文件读完");
+////                                onFrame(frame, headFirstIndex, fileSize - headFirstIndex);
+////                                //文件读取结束
+////                                isFinish = true;
+////                                break;
+////                            } else {
+////                                //找不到第二个帧头
+////                                headFirstIndex = -1;
+////                            }
+////                        }
 //
 //                    } else {
 //                        //文件读取结束
@@ -165,70 +259,6 @@ public class MediaCodecThread extends Thread {
 //            Log.e(TAG, "File not found");
 //        }
 //    }
-
-
-    @Override
-    public void run() {
-        super.run();
-        File file = new File(path);
-        int fileSize = (int) file.length();
-        //判断文件是否存在
-        if (file.exists()) {
-            try {
-                FileInputStream fis = new FileInputStream(file);
-                //保存完整数据帧
-                byte[] frame = new byte[fileSize];
-                //当前帧长度
-                int frameLen = 0;
-                //每次从文件读取的数据
-                byte[] readData = new byte[10 * 1024];
-                int spsIndex;
-                int sppIndex;
-                //开始时间
-                long startTime = System.currentTimeMillis();
-                //循环读取数据
-                while (!isFinish) {
-                    if (fis.available() > 0) {
-                        int readLen = fis.read(readData);
-                        Log.d(TAG, "readLen" + readLen);
-                        //当前长度小于文件大小
-                        //将readData拷贝到frame
-                        System.arraycopy(readData, 0, frame, frameLen, readLen);
-                        //修改frameLen
-                        frameLen += readLen;
-                        //寻找第一个帧头
-                        int headFirstIndex = findHead(frame, 0, frameLen);
-
-                        Log.d(TAG, "i帧位置 " + headFirstIndex + " read " + readLen + " totalRead  " + frameLen);
-                        while (headFirstIndex >= 0 && isHead(frame, headFirstIndex)) {
-                            Log.d(TAG, "找到i帧头 " + frameLen + " file size" + fileSize);
-
-                            //读长度 等于文件长度 ,表示 文件已读完
-                            if (frameLen >= fileSize) {
-                                //视频解码
-                                Log.d(TAG, "编码文件读完");
-                                onFrame(frame, headFirstIndex, fileSize - headFirstIndex);
-                                //文件读取结束
-                                isFinish = true;
-                                break;
-                            } else {
-                                //找不到第二个帧头
-                                headFirstIndex = -1;
-                            }
-                        }
-
-                    } else {
-                        //文件读取结束
-                        isFinish = true;
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } else {
-            Log.e(TAG, "File not found");
-        }
-    }
 
     //视频解码
     private void onFrame(byte[] frame, int offset, int length) {

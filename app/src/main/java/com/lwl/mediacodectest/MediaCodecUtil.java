@@ -1,13 +1,26 @@
 package com.lwl.mediacodectest;
 
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
+import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.graphics.YuvImage;
 import android.media.Image;
 import android.media.MediaCodec;
+import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
+import android.renderscript.Allocation;
+import android.renderscript.Element;
+import android.renderscript.RenderScript;
+import android.renderscript.ScriptIntrinsicYuvToRGB;
 import android.util.Log;
+import android.util.Range;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -19,11 +32,8 @@ import java.util.logging.Logger;
  */
 public class MediaCodecUtil {
     //自定义的log打印，可以无视
-    Logger logger = Logger.getLogger("MyMediaCodec");
 
     private String TAG = "MediaCodecUtil";
-    //解码后显示的surface及其宽高
-    private int width = 200, height = 200;
     //解码器
     private MediaCodec mCodec;
     private boolean isFirst = true;
@@ -32,21 +42,33 @@ public class MediaCodecUtil {
     private final static int TIME_INTERNAL = 5;
     private MediaFormat mediaFormat;
 
+    private Context context;
+
+    public MediaCodecUtil() {
+        this.context = context;
+    }
 
     private static final int COLOR_FormatI420 = 1;
     private static final int COLOR_FormatNV21 = 2;
 
+
+    private OnImageCallBack onImageCallBack;
+
+    public void setOnImageCallBack(OnImageCallBack onImageCallBack) {
+        this.onImageCallBack = onImageCallBack;
+    }
+
+    interface OnImageCallBack {
+        void onImage(Bitmap bitmap);
+    }
+
     /**
      * 初始化解码器
-     *
-     * @param width  surface宽
-     * @param height surface高
      */
-    public MediaCodecUtil(int width, int height) {
+    public MediaCodecUtil(Context context) {
 //        logger.d("MediaCodecUtil() called with: " + "holder = [" + holder + "], " +
 //                "width = [" + width + "], height = [" + height + "]");
-        this.width = width;
-        this.height = height;
+        this.context = context;
     }
 
 
@@ -57,22 +79,40 @@ public class MediaCodecUtil {
         }
     }
 
-    private void initDecoder() {
+    public void initDecoder() {
+
         try {
             //根据需要解码的类型创建解码器
             mCodec = MediaCodec.createDecoderByType(MIME_TYPE);
         } catch (IOException e) {
             e.printStackTrace();
         }
+        MediaCodecInfo.CodecCapabilities capabilitiesForType = mCodec.getCodecInfo().getCapabilitiesForType(MediaFormat.MIMETYPE_VIDEO_AVC);
+        MediaCodecInfo.VideoCapabilities videoCapabilities = capabilitiesForType.getVideoCapabilities();
+        Range<Integer> supportedWidths = videoCapabilities.getSupportedWidths();
+        Range<Integer> supportedHeights = videoCapabilities.getSupportedHeights();
         //初始化MediaFormat
         mediaFormat = MediaFormat.createVideoFormat(MIME_TYPE,
-                width, height);
+                supportedWidths.getLower(), supportedHeights.getLower());
         //配置MediaFormat以及需要显示的surface
         mCodec.configure(mediaFormat, null, null, 0);
         //开始解码
         mCodec.start();
         isFirst = false;
     }
+
+    private final static byte[] hex = "0123456789ABCDEF".getBytes();
+
+    // 从字节数组到十六进制字符串转换
+    public static String bytes2HexString(byte[] b) {
+        byte[] buff = new byte[2 * b.length];
+        for (int i = 0; i < b.length; i++) {
+            buff[2 * i] = hex[(b[i] >> 4) & 0x0f];
+            buff[2 * i + 1] = hex[b[i] & 0x0f];
+        }
+        return new String(buff);
+    }
+
 
     int mCount = 0;
 
@@ -81,52 +121,104 @@ public class MediaCodecUtil {
         // 获取输入buffer index
         ByteBuffer[] inputBuffers = mCodec.getInputBuffers();
         //-1表示一直等待；0表示不等待；其他大于0的参数表示等待毫秒数
-        int inputBufferIndex = mCodec.dequeueInputBuffer(-1);
-        if (inputBufferIndex >= 0) {
-            ByteBuffer inputBuffer = inputBuffers[inputBufferIndex];
-            //清空buffer
-            inputBuffer.clear();
-            //put需要解码的数据
-            inputBuffer.put(buf, offset, length);
-            //解码
-            mCodec.queueInputBuffer(inputBufferIndex, 0, length, mCount * TIME_INTERNAL, 0);
-            mCount++;
+        while (true) {
+            int inputBufferIndex = mCodec.dequeueInputBuffer(-1);
+            if (inputBufferIndex >= 0) {
+                Log.d(TAG, "onFrame inputBufferIndex " + inputBufferIndex);
 
-        } else {
-            return false;
-        }
-        // 获取输出buffer index
-        MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
-        int outputBufferIndex = mCodec.dequeueOutputBuffer(bufferInfo, 100);
-        if (outputBufferIndex>0){
-            Log.d(TAG, "onFrame outputBufferIndex " + outputBufferIndex);
-            //循环解码，直到数据全部解码完成
+                ByteBuffer inputBuffer = inputBuffers[inputBufferIndex];
+                //清空buffer
+                inputBuffer.clear();
+                //put需要解码的数据
+                inputBuffer.put(buf, offset, length);
+                //解码
+                mCodec.queueInputBuffer(inputBufferIndex, 0, length, mCount * TIME_INTERNAL, 0);
+                mCount++;
+
+            }
+            // 获取输出buffer index
+            MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
+            int outputBufferIndex = mCodec.dequeueOutputBuffer(bufferInfo, 100);
+            if (outputBufferIndex > 0) {
+                Log.d(TAG, "onFrame outputBufferIndex " + outputBufferIndex);
+                //循环解码，直到数据全部解码完成
 //        while (outputBufferIndex >= 0) {
-            //logger.d("outputBufferIndex = " + outputBufferIndex);
-            //true : 将解码的数据显示到surface上
+                //logger.d("outputBufferIndex = " + outputBufferIndex);
+                //true : 将解码的数据显示到surface上
 //            mCodec.releaseOutputBuffer(outputBufferIndex, true);
 //            outputBufferIndex = mCodec.dequeueOutputBuffer(bufferInfo, 0);
-            Image image = mCodec.getOutputImage(outputBufferIndex);
-            String fileName = "/sdcard/Download/" + String.format("frame_1.jpg");
-            compressToJpeg(fileName, image);
-        }else {
-            Log.e(TAG, "outputBufferIndex = " + outputBufferIndex);
+                if (outputBufferIndex >= 0) {
+                    Image image = mCodec.getOutputImage(outputBufferIndex);
+                    String fileName = "/sdcard/Download/output/" + String.format("deCodec_frame_" + System.currentTimeMillis() + ".jpg");
+//                    compressToJpeg(fileName, image);
+                    mediaImageToBitmap(image);
+                    stopCodec();
+                    break;
+                }
 
+
+            } else {
+//                Log.e(TAG, "outputBufferIndex = " + outputBufferIndex);
+
+            }
         }
 
         return true;
     }
 
+    public Bitmap mediaImageToBitmap(Image image) {
+
+        final ByteBuffer yuvBytes = ByteBuffer.wrap(getDataFromImage(image, COLOR_FormatNV21));
+
+        // Convert YUV to RGB
+        RenderScript rs = RenderScript.create(context);
+
+        Bitmap bitmap = Bitmap.createBitmap(image.getWidth(), image.getHeight(), Bitmap.Config.ARGB_8888);
+        Allocation allocationRgb = Allocation.createFromBitmap(rs, bitmap);
+
+        Allocation allocationYuv = Allocation.createSized(rs, Element.U8(rs), yuvBytes.array().length);
+        allocationYuv.copyFrom(yuvBytes.array());
+
+        ScriptIntrinsicYuvToRGB scriptYuvToRgb = ScriptIntrinsicYuvToRGB.create(rs, Element.U8_4(rs));
+        scriptYuvToRgb.setInput(allocationYuv);
+        scriptYuvToRgb.forEach(allocationRgb);
+        allocationRgb.copyTo(bitmap);
+
+        float rote = 200f / image.getWidth();
+        Matrix matrix = new Matrix();
+        matrix.postScale(rote, rote);  //长和宽放大缩小的比例
+        Bitmap resizeBmp = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        resizeBmp.compress(Bitmap.CompressFormat.JPEG, 80, baos);
+        ByteArrayInputStream isBm = new ByteArrayInputStream(baos.toByteArray());
+        Bitmap newBitmap = BitmapFactory.decodeStream(isBm, null, null);
+        if (onImageCallBack != null) {
+//            Log.e(TAG, "bitmap size" + newBitmap.getByteCount());
+//            Log.e(TAG, "bitmap widt" + newBitmap.getWidth() + "   height " + newBitmap.getHeight());
+            onImageCallBack.onImage(newBitmap);
+        }
+        return bitmap;
+    }
+
     private void compressToJpeg(String fileName, Image image) {
         FileOutputStream outStream;
         try {
+            File file = new File(fileName);
+            File parentFile = file.getParentFile();
+            if (!parentFile.exists()) {
+                parentFile.mkdirs();
+            }
             outStream = new FileOutputStream(fileName);
         } catch (IOException ioe) {
             throw new RuntimeException("Unable to create output file " + fileName, ioe);
         }
         Rect rect = image.getCropRect();
         YuvImage yuvImage = new YuvImage(getDataFromImage(image, COLOR_FormatNV21), ImageFormat.NV21, rect.width(), rect.height(), null);
+
         yuvImage.compressToJpeg(rect, 100, outStream);
+
+
     }
 
     private byte[] getDataFromImage(Image image, int colorFormat) {
