@@ -21,6 +21,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 public class DecoderActivity extends AppCompatActivity {
 
@@ -30,10 +32,12 @@ public class DecoderActivity extends AppCompatActivity {
     private MediaCodecUtil codecUtil;
     private MediaCodecThread thread;
     private String path = "/sdcard/AKASO/amba/thumb_1620899691638.h264";
+    //    private String path = "/sdcard/AKASO/amba/NORM_0016.MP4.thumb";
 //    private String path = "/sdcard/Download/NORM_0016.MP4.thumb";
     private SurfaceHolder holder;
 
     private String TAG = "DecoderActivity";
+    private Executor executor = Executors.newSingleThreadExecutor();
 
     static {
         System.loadLibrary("ijkffmpegCmd");
@@ -56,6 +60,12 @@ public class DecoderActivity extends AppCompatActivity {
 
             }
         });
+        surfaceView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                surfaceView.setImageBitmap(null);
+            }
+        });
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -65,25 +75,47 @@ public class DecoderActivity extends AppCompatActivity {
     }
 
     private void startDecoder() {
-        try {
-            File file = new File(path);
-            int fileLength = (int) file.length();
-            byte[] buff = new byte[fileLength];
-            FileInputStream fileInputStream = new FileInputStream(path);
-            int read = fileInputStream.read(buff);
-            Log.d(TAG, "file length " + fileLength + "   read length " + read);
-            byte[] decode = decode(buff);
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
 
-            Log.d(TAG, "decode complete" + decode.length + "   " + (decode.length / 1024 / 1024) + " mb  Thread " + Thread.currentThread().getName());
-            Bitmap VideoBit = Bitmap.createBitmap(200, 112, Bitmap.Config.RGB_565);
+                try {
+                    File file = new File(path);
+                    int fileLength = (int) file.length();
+                    byte[] buff = new byte[fileLength];
+                    FileInputStream fileInputStream = new FileInputStream(path);
+                    int read = fileInputStream.read(buff);
+                    Log.d(TAG, "file length " + fileLength + "   read length " + read);
+                    long start = System.currentTimeMillis();
+                    byte[] decode = decode(buff);
+                    if (decode != null && decode.length > 0) {
+                        Log.d(TAG, "decode complete" +" time "+ (System.currentTimeMillis()-start)+" length "+ decode.length + "   " + (decode.length / 1024f / 1024f) + " mb  Thread " + Thread.currentThread().getName());
+//                Bitmap bitmap = Bitmap.createBitmap(200, 112, Bitmap.Config.RGB_565);
+//
+//                bitmap.copyPixelsFromBuffer(ByteBuffer.wrap(decode));
+                        Bitmap bitmap = BitmapFactory.decodeByteArray(decode, 0, decode.length);
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                surfaceView.setImageBitmap(bitmap);
 
-            VideoBit.copyPixelsFromBuffer(ByteBuffer.wrap(decode));
-            surfaceView.setImageBitmap(VideoBit);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+                            }
+                        });
+                    } else {
+                        Log.d(TAG, "解析失败");
+
+                    }
+
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+
+            }
+        });
+
     }
 
     //初始化播放相关

@@ -17,14 +17,16 @@ Java_com_lwl_mediacodectest_DecoderActivity_decode(JNIEnv *env, jobject thiz, jb
     jsize buffSize = env->GetArrayLength(buff);
     jbyte *buffjbyte = env->GetByteArrayElements(buff, NULL);
 
-    decodeData(reinterpret_cast<unsigned char *>(buffjbyte), buffSize, &result, &resultLenth);
-
+    int ret= decodeData(reinterpret_cast<unsigned char *>(buffjbyte), buffSize, &result, &resultLenth);
+    if (ret<0){
+        return  env->NewByteArray(0);
+    }
     jbyteArray array = env->NewByteArray(resultLenth);
     try {
         env->SetByteArrayRegion(array, 0, resultLenth, reinterpret_cast<jbyte *>(result));
         free(result);
         return array;
     } catch (...) {
-        return array;
+        return env->NewByteArray(0);
     }
 }

@@ -13,7 +13,7 @@
 //解码
 // data 原数据  len 原数据长度
 //rData  解码后的图片数据  rLen 长度
-void decodeData(unsigned char* data,int len,unsigned char **rData,int *rLen);
+int decodeData(unsigned char* data,int len,unsigned char **rData,int *rLen);
 
 //销毁解码器
 void destryDecoder(void);
