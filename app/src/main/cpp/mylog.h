@@ -9,10 +9,10 @@
 #include <jni.h>
 #include <android/log.h>
 
-#define LOG_TAG "ijkffmpeg"
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
-#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
-#define LOGV(...) __android_log_print(ANDROID_LOG_VERBOSE, LOG_TAG, __VA_ARGS__)
+#define DEFAULT_LOG_TAG "ijkffmpegCmd"
+#define LOGI(TAG, ...) __android_log_print(ANDROID_LOG_INFO, DEFAULT_LOG_TAG, __VA_ARGS__)
+#define LOGD(TAG, ...) __android_log_print(ANDROID_LOG_DEBUG, TAG, __VA_ARGS__)
+#define LOGE(TAG, ...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
+#define LOGV(TAG, ...) __android_log_print(ANDROID_LOG_VERBOSE, TAG, __VA_ARGS__)
 
 #endif //MEDIACODECTEST_MYLOG_H

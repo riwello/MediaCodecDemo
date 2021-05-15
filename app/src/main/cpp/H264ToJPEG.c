@@ -16,11 +16,13 @@
 #include"time.h"
 
 
-#define FFMPEG_TAG "H264ToJPEG"
 #define MAX_SCALE_SIZE 200
-#define ALOGI(TAG, FORMAT, ...) __android_log_vprint(ANDROID_LOG_INFO, TAG, FORMAT, ##__VA_ARGS__);
-#define ALOGE(TAG, FORMAT, ...) __android_log_vprint(ANDROID_LOG_ERROR, TAG, FORMAT, ##__VA_ARGS__);
-#define ALOGW(TAG, FORMAT, ...) __android_log_vprint(ANDROID_LOG_WARN, TAG, FORMAT, ##__VA_ARGS__);
+#define TAG "h264ToJpg"
+#define FFMPEG_TAG "ffmpeg"
+
+#define ALOGI(_TAG, FORMAT, ...) __android_log_vprint(ANDROID_LOG_INFO,_TAG, FORMAT, ##__VA_ARGS__);
+#define ALOGE(_TAG, FORMAT, ...) __android_log_vprint(ANDROID_LOG_ERROR, _TAG, FORMAT, ##__VA_ARGS__);
+#define ALOGW(_TAG, FORMAT, ...) __android_log_vprint(ANDROID_LOG_WARN, _TAG, FORMAT, ##__VA_ARGS__);
 
 /**
  * ffmpeg 日志输出
@@ -80,7 +82,8 @@ int scaleYuv(AVFrame *avFrame, AVFrame **outAvF) {
     //分配outAvFrame内存 , 转换成jpg后再释放
     avpicture_alloc((AVPicture *) outAvFrame, outAvFrame->format, scaledWidth, scaledHeight);
 
-    LOGD("原尺寸 w %d  w %d  转换尺寸 w %d  h %d", sourceWidth, sourceHeight, scaledWidth, scaledHeight);
+    LOGD(TAG, "原尺寸 w %d  w %d  转换尺寸 w %d  h %d", sourceWidth, sourceHeight, scaledWidth,
+         scaledHeight);
     struct SwsContext *imgConvertCtx = sws_getContext(sourceWidth,
                                                       sourceHeight,
                                                       avFrame->format,
@@ -92,7 +95,7 @@ int scaleYuv(AVFrame *avFrame, AVFrame **outAvF) {
                                                       NULL,
                                                       NULL);
     if (imgConvertCtx == NULL) {
-        LOGE("SwsContext 初始化失败");
+        LOGE(TAG, "SwsContext 初始化失败");
         return -1;
     }
 
@@ -106,14 +109,14 @@ int scaleYuv(AVFrame *avFrame, AVFrame **outAvF) {
 
     *outAvF = outAvFrame;
     sws_freeContext(imgConvertCtx);
-    LOGV("sws_scale complete");
+    LOGV(TAG, "sws_scale complete");
 }
 
 
 int encodeAsJPEG(AVFrame *pFrame, unsigned char **rData, int *rLeng) {
     int width = pFrame->width;
     int height = pFrame->height;
-    LOGV("width %d %d", width, height);
+    LOGV(TAG, "width %d %d", width, height);
 //    char out_file[100] = "/sdcard/AKASO/amba/out.jpeg";
     AVCodecContext *pCodeCtx = NULL;
     // 分配AVFormatContext对象
@@ -122,19 +125,19 @@ int encodeAsJPEG(AVFrame *pFrame, unsigned char **rData, int *rLeng) {
     // 设置输出文件格式
     pFormatCtx->oformat = av_guess_format("mjpeg", NULL, NULL);
     if (pFormatCtx->oformat == NULL) {
-        LOGE("Couldn't av_guess_format oformat");
+        LOGE(TAG, "Couldn't av_guess_format oformat");
         return -1;
     }
 
     // 创建并初始化输出AVIOContext
     if (avio_open_dyn_buf(&pFormatCtx->pb) < 0) {
-        LOGE("Couldn't open output file.");
+        LOGE(TAG, "Couldn't open output file.");
         return -1;
     }
 
 //    // 创建并初始化输出AVIOContext  输出文件
 //    if (avio_open(&pFormatCtx->pb, &out_file, AVIO_FLAG_READ_WRITE) < 0) {
-//        LOGD("Couldn't open output file.");
+//        LOGD(TAG,"Couldn't open output file.");
 //        return -1;
 //    }
 
@@ -154,7 +157,7 @@ int encodeAsJPEG(AVFrame *pFrame, unsigned char **rData, int *rLeng) {
     AVCodec *pCodec = avcodec_find_encoder(pAVStream->codecpar->codec_id);
 
     if (!pCodec) {
-        LOGE("Could not find encoder");
+        LOGE(TAG, "Could not find encoder");
         return -1;
     }
 
@@ -163,25 +166,25 @@ int encodeAsJPEG(AVFrame *pFrame, unsigned char **rData, int *rLeng) {
 
     pCodeCtx = avcodec_alloc_context3(pCodec);
     if (!pCodeCtx) {
-        LOGE("Could not allocate video codec context");
+        LOGE(TAG, "Could not allocate video codec context");
         return -1;
     }
 
     if ((avcodec_parameters_to_context(pCodeCtx, pAVStream->codecpar)) < 0) {
-        LOGE("Failed to copy  codec parameters to decoder context");
+        LOGE(TAG, "Failed to copy  codec parameters to decoder context");
         return -1;
     }
 
     pCodeCtx->time_base = (AVRational) {1, 25};
     int ret_avcodec_open2 = avcodec_open2(pCodeCtx, pCodec, NULL);
     if (ret_avcodec_open2 < 0) {
-        LOGE("Could not open codec.%d", ret_avcodec_open2);
+        LOGE(TAG, "Could not open codec.%d", ret_avcodec_open2);
         return -1;
     }
 
     int ret = avformat_write_header(pFormatCtx, NULL);
     if (ret < 0) {
-        LOGE("write_header fail %d", ret);
+        LOGE(TAG, "write_header fail %d", ret);
         return -1;
     }
 
@@ -195,21 +198,21 @@ int encodeAsJPEG(AVFrame *pFrame, unsigned char **rData, int *rLeng) {
     // 编码数据
     ret = avcodec_send_frame(pCodeCtx, pFrame);
     if (ret < 0) {
-        LOGE("Could not avcodec_send_frame.");
+        LOGE(TAG, "Could not avcodec_send_frame.");
         return -1;
     }
 
     // 得到编码后数据
     ret = avcodec_receive_packet(pCodeCtx, &pkt);
     if (ret < 0) {
-        LOGE("Could not avcodec_receive_packet");
+        LOGE(TAG, "Could not avcodec_receive_packet");
         return -1;
     }
 
     ret = av_write_frame(pFormatCtx, &pkt);
 
     if (ret < 0) {
-        LOGE("Could not av_write_frame");
+        LOGE(TAG, "Could not av_write_frame");
         return -1;
     }
 
@@ -221,7 +224,7 @@ int encodeAsJPEG(AVFrame *pFrame, unsigned char **rData, int *rLeng) {
     *rLeng = avio_get_dyn_buf(pFormatCtx->pb, &outBuffer);
     *rData = outBuffer;
 
-    LOGV("JPG转换完成");
+    LOGV(TAG, "JPG转换完成");
     avcodec_close(pCodeCtx);
     avformat_free_context(pFormatCtx);
     av_frame_free(&pFrame);
@@ -237,18 +240,18 @@ int decodeData(unsigned char *data, int len, unsigned char **rData, int *rLen) {
 
     AVCodec *codec = avcodec_find_decoder(AV_CODEC_ID_H264);
     if (codec == NULL) {
-        LOGE("找不到H264解码器");
+        LOGE(TAG, "找不到H264解码器");
         return -1;
     }
     AVCodecContext *codecCtx = avcodec_alloc_context3(codec);
     if (codecCtx == NULL) {
-        LOGD("codecCtx 初始化失败");
+        LOGD(TAG, "codecCtx 初始化失败");
         return -1;
     }
 
     int ret = avcodec_open2(codecCtx, codec, NULL);
     if (ret != 0) {
-        LOGD("open codec failed :%d", ret);
+        LOGD(TAG, "open codec failed :%d", ret);
         return -1;
     }
     //开始解码
@@ -267,13 +270,13 @@ int decodeData(unsigned char *data, int len, unsigned char **rData, int *rLen) {
     do {
         if (send != 0) {
             send = avcodec_send_packet(codecCtx, packet);
-            LOGE("decoder packet %d  ", send);
+            LOGE(TAG, "decoder packet %d  ", send);
         } else {
             avcodec_send_packet(codecCtx, NULL);
         }
 
         rec = avcodec_receive_frame(codecCtx, pFrame);
-        LOGE("receive_frame %d", rec);
+        LOGE(TAG, "receive_frame %d", rec);
     } while (rec != 0);
 
     struct AVFrame *avFrame;
