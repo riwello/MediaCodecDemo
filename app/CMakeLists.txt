@@ -20,7 +20,7 @@ add_library( # Sets the name of the library.
         SHARED
 
         # Provides a relative path to your source file(s).
-        src/main/cpp/H264ToRgb.c
+        src/main/cpp/H264ToJPEG.c
         src/main/cpp/IjkffmpegCmd_jni.cpp)
 
 # Searches for a specified prebuilt library and stores the path as a

@@ -4,7 +4,7 @@
 
 extern "C"
 {
-#include <H264ToRgb.h>
+#include <H264ToJPEG.h>
 
 }
 
@@ -18,6 +18,9 @@ Java_com_lwl_mediacodectest_DecoderActivity_decode(JNIEnv *env, jobject thiz, jb
     jbyte *buffjbyte = env->GetByteArrayElements(buff, NULL);
 
     int ret= decodeData(reinterpret_cast<unsigned char *>(buffjbyte), buffSize, &result, &resultLenth);
+
+    env->ReleaseByteArrayElements(buff,buffjbyte,0);
+
     if (ret<0){
         return  env->NewByteArray(0);
     }

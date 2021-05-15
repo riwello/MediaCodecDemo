@@ -32,7 +32,7 @@ public class DecoderActivity extends AppCompatActivity {
     private MediaCodecUtil codecUtil;
     private MediaCodecThread thread;
     private String path = "/sdcard/AKASO/amba/thumb_1620899691638.h264";
-    //    private String path = "/sdcard/AKASO/amba/NORM_0016.MP4.thumb";
+//        private String path = "/sdcard/AKASO/amba/NORM_0016.MP4.thumb";
 //    private String path = "/sdcard/Download/NORM_0016.MP4.thumb";
     private SurfaceHolder holder;
 
@@ -42,6 +42,8 @@ public class DecoderActivity extends AppCompatActivity {
     static {
         System.loadLibrary("ijkffmpegCmd");
     }
+
+    private Bitmap bitmap;
 
     public native byte[] decode(byte[] buff);
 
@@ -63,6 +65,7 @@ public class DecoderActivity extends AppCompatActivity {
         surfaceView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                bitmap.recycle();
                 surfaceView.setImageBitmap(null);
             }
         });
@@ -89,11 +92,11 @@ public class DecoderActivity extends AppCompatActivity {
                     long start = System.currentTimeMillis();
                     byte[] decode = decode(buff);
                     if (decode != null && decode.length > 0) {
-                        Log.d(TAG, "decode complete" +" time "+ (System.currentTimeMillis()-start)+" length "+ decode.length + "   " + (decode.length / 1024f / 1024f) + " mb  Thread " + Thread.currentThread().getName());
+                        Log.d(TAG, "decode complete" +" time "+ (System.currentTimeMillis()-start)+" length "+ decode.length + "   " + (decode.length / 1024f ) + " kb  Thread " + Thread.currentThread().getName());
 //                Bitmap bitmap = Bitmap.createBitmap(200, 112, Bitmap.Config.RGB_565);
 //
 //                bitmap.copyPixelsFromBuffer(ByteBuffer.wrap(decode));
-                        Bitmap bitmap = BitmapFactory.decodeByteArray(decode, 0, decode.length);
+                         bitmap = BitmapFactory.decodeByteArray(decode, 0, decode.length);
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {

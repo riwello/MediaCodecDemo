@@ -1,13 +1,13 @@
 //
-//  SNDecodeHelper.h
-//  Video
+//
+//  H264ToJPEG.h
 //
 //  Created by censt on 2021/5/12.
 //  Copyright © 2021 cnest. All rights reserved.
 //
 
-#ifndef SNDecodeHelper_h
-#define SNDecodeHelper_h
+#ifndef H264ToJPEG_h
+#define H264ToJPEG_h
 
 
 //解码
@@ -15,8 +15,6 @@
 //rData  解码后的图片数据  rLen 长度
 int decodeData(unsigned char* data,int len,unsigned char **rData,int *rLen);
 
-//销毁解码器
-void destryDecoder(void);
 
 
-#endif /* SNDecodeHelper_h */
+#endif /* H264ToJPEG_h */
