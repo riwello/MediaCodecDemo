@@ -12,29 +12,21 @@
         android:requestLegacyExternalStorage="true"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:name=".App"
         android:theme="@style/Theme.MediaCodecTest">
-        <activity
-            android:name=".ScrollingActivity"
-            android:label="@string/title_activity_scrolling"
-            android:theme="@style/Theme.MediaCodecTest.NoActionBar">
 
-
-        </activity>
-        <activity android:name=".MainActivity">
+        <activity android:name=".PrintMediaCodecConfigActivity">
 
         </activity>
 
-        <activity android:name=".DecoderActivity">
+        <activity android:name=".H264ToJPEGActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".LockActivity" >
 
-
-        </activity>
     </application>
 
 </manifest>

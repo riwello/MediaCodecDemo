@@ -13,7 +13,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import java.util.*
 
-class MainActivity : AppCompatActivity() {
+class PrintMediaCodecConfigActivity : AppCompatActivity() {
     lateinit var tvMsg: TextView
     lateinit var etWidth: EditText
     lateinit var etHeight: EditText

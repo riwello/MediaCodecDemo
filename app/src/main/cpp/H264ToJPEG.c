@@ -267,13 +267,14 @@ int decodeData(unsigned char *data, int len, unsigned char **rData, int *rLen) {
     int rec = -1;
     int send = -1;
 
+    send = avcodec_send_packet(codecCtx, packet);
+    if (send != 0) {
+        LOGE(TAG, "send_packet failed ", send);
+        return -1;
+    }
+
     do {
-        if (send != 0) {
-            send = avcodec_send_packet(codecCtx, packet);
-            LOGE(TAG, "decoder packet %d  ", send);
-        } else {
-            avcodec_send_packet(codecCtx, NULL);
-        }
+        avcodec_send_packet(codecCtx, NULL);
 
         rec = avcodec_receive_frame(codecCtx, pFrame);
         LOGE(TAG, "receive_frame %d", rec);

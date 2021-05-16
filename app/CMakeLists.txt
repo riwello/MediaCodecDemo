@@ -23,23 +23,33 @@ add_library( # Sets the name of the library.
         src/main/cpp/H264ToJPEG.c
         src/main/cpp/IjkffmpegCmd_jni.cpp)
 
+
 # Searches for a specified prebuilt library and stores the path as a
 # variable. Because CMake includes system libraries in the search path by
 # default, you only need to specify the name of the public NDK library
 # you want to add. CMake verifies that the library exists before
 # completing its build.
 
+#ijk的ffmpeg
 add_library(ijkffmpeg
         SHARED
         IMPORTED)
-
 set_target_properties(
         ijkffmpeg
         PROPERTIES IMPORTED_LOCATION
-        ${CMAKE_SOURCE_DIR}/src/main/jniLibs/${CMAKE_ANDROID_ARCH_ABI}/libijkffmpeg.so
+        # Android 4、0 以后， cmake 引用的动态库不能放在jniLibs里，需要换个路径
+        ${CMAKE_SOURCE_DIR}/src/main/extra/${CMAKE_ANDROID_ARCH_ABI}/libijkffmpeg.so
 )
 
-
+# FfmpegAndroid的ffmpeg
+#add_library(ffmpeg
+#        SHARED
+#        IMPORTED)
+#set_target_properties(
+#        ffmpeg
+#        PROPERTIES IMPORTED_LOCATION
+#        ${CMAKE_SOURCE_DIR}/src/main/extra/${CMAKE_ANDROID_ARCH_ABI}/libffmpeg.so
+#)
 
 include_directories(src/main/cpp)
 
@@ -47,10 +57,10 @@ include_directories(src/main/cpp/include)
 
 if (${CMAKE_ANDROID_ARCH_ABI} MATCHES "armeabi-v7a")
     include_directories(src/main/cpp/include/armeabi-v7a)
-    message("This is armeabi-v7a")
+
 elseif (${CMAKE_ANDROID_ARCH_ABI} MATCHES "arm64-v8a")
     include_directories(src/main/cpp/include/arm64-v8a)
-    message("This is arm64-v8a")
+
 endif ()
 
 
@@ -68,6 +78,7 @@ find_library( # Sets the name of the path variable.
 target_link_libraries( # Specifies the target library.
         ijkffmpegCmd
         ijkffmpeg
+#        ffmpeg
         # Links the target library to the log library
         # included in the NDK.
         ${log-lib})

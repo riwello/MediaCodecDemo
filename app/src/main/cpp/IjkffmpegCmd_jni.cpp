@@ -10,7 +10,7 @@ extern "C"
 
 extern "C"
 JNIEXPORT jbyteArray JNICALL
-Java_com_lwl_mediacodectest_DecoderActivity_decode(JNIEnv *env, jobject thiz, jbyteArray buff) {
+Java_com_lwl_mediacodectest_H264ToJPEGActivity_decode(JNIEnv *env, jobject thiz, jbyteArray buff) {
 
     unsigned char *result;
     int resultLenth = 0;

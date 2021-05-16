@@ -5,9 +5,10 @@
     android:layout_height="match_parent">
 
     <Button
-        android:id="@+id/btn_start"
+        android:id="@+id/btn_start_ffmpeg"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:text="软解"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -15,17 +16,19 @@
         android:id="@+id/btn_start_mediaCodec"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:text="硬解"
         android:layout_marginLeft="15dp"
         android:onClick="onclick"
-        app:layout_constraintLeft_toRightOf="@id/btn_start"
+        app:layout_constraintLeft_toRightOf="@id/btn_start_ffmpeg"
         app:layout_constraintTop_toTopOf="parent" />
 
     <ImageView
-        android:id="@+id/surface_view"
+        android:id="@+id/iv_ffmpeg"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintDimensionRatio="1"
-        app:layout_constraintTop_toBottomOf="@id/btn_start"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btn_start_ffmpeg"
         app:layout_constraintWidth_percent="0.3333" />
 
     <ImageView
@@ -34,7 +37,7 @@
         android:layout_height="0dp"
         android:layout_marginLeft="15dp"
         app:layout_constraintDimensionRatio="1"
-        app:layout_constraintLeft_toRightOf="@id/surface_view"
-        app:layout_constraintTop_toBottomOf="@id/btn_start"
+        app:layout_constraintLeft_toRightOf="@id/iv_ffmpeg"
+        app:layout_constraintTop_toBottomOf="@id/btn_start_ffmpeg"
         app:layout_constraintWidth_percent="0.3333" />
 </androidx.constraintlayout.widget.ConstraintLayout>
