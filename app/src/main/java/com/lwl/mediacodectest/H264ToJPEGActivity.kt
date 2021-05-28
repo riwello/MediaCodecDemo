@@ -32,6 +32,7 @@ class H264ToJPEGActivity : AppCompatActivity() {
 
     private var bitmap: Bitmap? = null
     external fun decode(buff: ByteArray?): ByteArray?
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityDecoderBinding.inflate(layoutInflater)
